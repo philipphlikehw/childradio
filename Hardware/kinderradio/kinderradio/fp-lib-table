@@ -1,0 +1,5 @@
+(fp_lib_table
+  (lib (name "proj_lib")(type "KiCad")(uri "${KIPRJMOD}/proj_lib.pretty")(options "")(descr ""))
+  (lib (name "kinderradio")(type "KiCad")(uri "C:/Users/brh1lr/Documents/KiCad/proj/kinderradio/kinderradio.pretty")(options "")(descr ""))
+  (lib (name "ESP32-WROVER-E-main")(type "KiCad")(uri "${KIPRJMOD}/proj_lib/ESP32-WROVER-E-main.pretty")(options "")(descr ""))
+)
