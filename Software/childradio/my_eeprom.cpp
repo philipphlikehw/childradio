@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "EEPROM.h"
 #include "my_common.h"
 #include "my_eeprom.h"
@@ -7,15 +8,16 @@ extern int DEBUG;
 
 int write_url(uint16_t count, char *destination){
   if (count<0 or count > URL_COUNT-1) return -1;  
-  // writing byte-by-byte to EEPROM
-  // if (DEBUG&4>0) Serial.print("Write Channel ");
-  // if (DEBUG&4>0) Serial.print(count);
-  // if (DEBUG&4>0) Serial.print(": ");
-  // if (DEBUG&4>0) Serial.println(destination);
-  for (uint8_t i = 0; i < URL_LENGTH; i++) {
+  if (DEBUG&4>0) Serial.print("Write Channel ");
+  if (DEBUG&4>0) Serial.print(count);
+  if (DEBUG&4>0) Serial.print(": ");
+  if (DEBUG&4>0) Serial.print(destination);
+  //writing byte-by-byte to EEPROM
+  for (uint16_t i = 0; i < URL_LENGTH-1; i++) {
     EEPROM.write(i+URL_LENGTH*count, destination[i]);
     EEPROM.commit();
   }
+  if (DEBUG&4>0) Serial.println("     done");
   return 0;
 }
 
@@ -86,7 +88,7 @@ uint8_t read_station(bool increment){
 void setup_eeprom()
 {
     if (!EEPROM.begin(EEPROM_SIZE)) {
-      // if (DEBUG&4>0) Serial.println("failed to init EEPROM");
+      if (DEBUG&4>0) Serial.println("failed to init EEPROM");
       delay(1000000);
     }
     if( (eeprom_read_station_counter()<0      or eeprom_read_station_counter()>URL_COUNT-1) or \
@@ -96,10 +98,10 @@ void setup_eeprom()
         (eeprom_read_gain_band() <TONE_MIN    or eeprom_read_gain_band()   >TONE_MAX-1) or \
         (eeprom_read_gain_high() <TONE_MIN    or eeprom_read_gain_high()   >TONE_MAX-1) or \
         (eeprom_read_station_active()==0) ){
-          // if (DEBUG&4>0) Serial.println("Check EEPROM for consitensy failed!");
+          if (DEBUG&4>0) Serial.println("EEPROM:  Check for consitensy failed!");
           eeprom_init();
         }else{
-          // if (DEBUG&4>0) Serial.println("Check EEPROM for consitensy success!");
+          if (DEBUG&4>0) Serial.println("EEPROM:  Check for consitensy success!");
         }
         
     
@@ -107,14 +109,19 @@ void setup_eeprom()
 
 
 void eeprom_init(){
-    // iif (DEBUG&4>0) Serial.println("Write Init-Data to EEPROM");
     eeprom_clear();
-    char default_URL[64];
+    char default_URL[URL_LENGTH];
+    char default_HOST[HOSTNAME_LENGTH];
+    if (DEBUG&4>0) Serial.println("EEPROM:  Write Init-Data");
+    if (DEBUG&4>0) Serial.println("EEPROM:  Write Init-Data URL0");
     memcpy(default_URL,URL_DEFAULT0,sizeof(URL_DEFAULT0));
     write_url(0,default_URL);
+    if (DEBUG&4>0) Serial.println("EEPROM:  Write Init-Data URL1");
     memcpy(default_URL,URL_DEFAULT1,sizeof(URL_DEFAULT1));
     write_url(1,default_URL);
+    if (DEBUG&4>0) Serial.println("EEPROM:  Write Init-Data URL2");
     memcpy(default_URL,URL_DEFAULT2,sizeof(URL_DEFAULT2));
+    if (DEBUG&4>0) Serial.println("EEPROM:  Write Init-Data Vol and Tone");
     write_url(2,default_URL);
     eeprom_write_station_counter(0);
     eeprom_write_station_active(7);   //activat Station 1-3
@@ -125,22 +132,51 @@ void eeprom_init(){
     eeprom_write_gain_high(0);
     eeprom_write_time(0);//ToDo
     eeprom_write_bat(100);
+    if (DEBUG&4>0) Serial.println("EEPROM:  Write Init-Data Alarm");
     eeprom_write_alarm_status(0);
     eeprom_write_alarm_volumen(10);
     eeprom_write_high_gain(0);
+    eeprom_write_rgb_brightness(64);
+    eeprom_write_rgb_time(100);
+    eeprom_write_rgb_palette(1);
+    if (DEBUG&4>0) Serial.println("EEPROM:  Write Init-Data Hostname");
+    memcpy(default_HOST,HOSTNAME_default,sizeof(HOSTNAME_default));
+    write_hostname(default_HOST);
     EEPROM.commit();    
 }
 
-int read_url(uint16_t count, char *destination){
-  char *readValueChar;
-  if (count<0 or count > URL_COUNT-1) return -1; 
-  // iif (DEBUG&4>0) Serial.print("Read Channel ");
-  // iif (DEBUG&4>0) Serial.print(count);
-  // iif (DEBUG&4>0) Serial.print(": ");
-     
-  for (uint16_t i = 0; i < URL_LENGTH; i++) {
-    destination[i] = EEPROM.read(i+URL_LENGTH*count);
+int read_hostname(char *destination)
+{
+  for (uint16_t i = 0; i < HOSTNAME_LENGTH; i++) {
+    destination[i] = EEPROM.read(i+HOSTNAME_ADR);
     // iif (DEBUG&4>0) Serial.print(destination[i]);
+  }
+  // iif (DEBUG&4>0) Serial.println();
+  return 0;
+}
+
+int write_hostname(char *destination)
+{
+  if (DEBUG&4>0) Serial.print("EEPROM:  Write Hostname   ");
+  for (uint16_t i = 0; i < HOSTNAME_LENGTH-1; i++) {
+    if (DEBUG&4>0) Serial.print(destination[i]);
+    EEPROM.write(i+HOSTNAME_ADR, destination[i]);
+    EEPROM.commit();
+  }
+  if (DEBUG&4>0) Serial.println("");
+  return 0;
+}
+
+
+int read_url(uint16_t count, char *destination){
+  if (count<0 or count > URL_COUNT-1) return -1; 
+  //if (DEBUG&4>0) Serial.print("Read Channel ");
+  //if (DEBUG&4>0) Serial.print(count);
+  //if (DEBUG&4>0) Serial.print(": ");
+     
+  for (uint16_t i = 0; i < URL_LENGTH-1; i++) {
+    destination[i] = EEPROM.read(i+URL_LENGTH*count);
+  //  if (DEBUG&4>0) Serial.print(destination[i]);
   }
   // iif (DEBUG&4>0) Serial.println();
   return 0;
@@ -148,6 +184,7 @@ int read_url(uint16_t count, char *destination){
 
 void eeprom_clear(void)
 {
+  if (DEBUG&4>0) Serial.println("EEPROM: Clear!!!");
   for (int i = 0; i < EEPROM_SIZE; i++) {
     EEPROM.write(i, -1);
   }
@@ -163,21 +200,21 @@ void eeprom_clear(void)
  */
 int8_t eeprom_read_byte(uint16_t addr, const char* label){
   int8_t read_data=(int8_t)EEPROM.read(addr); 
-  //if (count<0 or count > URL_COUNT-1) return -1; 
-  // iif (DEBUG&4>0) Serial.print("EEPROM Read ");
-  // iif (DEBUG&4>0) Serial.print(label);  
-  // iif (DEBUG&4>0) Serial.print(": ");   
-  // iif (DEBUG&4>0) Serial.println(read_data);  
+  //  if (count<0 or count > URL_COUNT-1) return -1; 
+  //  if (DEBUG&4>0) Serial.print("EEPROM Read ");
+  //  if (DEBUG&4>0) Serial.print(label);  
+  //  if (DEBUG&4>0) Serial.print(": ");   
+  //  if (DEBUG&4>0) Serial.println(read_data);  
   return read_data;
 }
 
 int8_t eeprom_write_byte(uint16_t addr,int8_t write_data, const char* label){
-  // iif (DEBUG&4>0) Serial.print("EEPROM ADR ");
-  // iif (DEBUG&4>0) Serial.print(addr);
-  // iif (DEBUG&4>0) Serial.print(" ");
-  // iif (DEBUG&4>0) Serial.print(label);  
-  // iif (DEBUG&4>0) Serial.print(": "); 
-  // iif (DEBUG&4>0) Serial.println(write_data);  
+  //  if (DEBUG&4>0) Serial.print("EEPROM ADR ");
+  //  if (DEBUG&4>0) Serial.print(addr);
+  //  if (DEBUG&4>0) Serial.print(" ");
+  //  if (DEBUG&4>0) Serial.print(label);  
+  //  if (DEBUG&4>0) Serial.print(": "); 
+  //  if (DEBUG&4>0) Serial.println(write_data);  
   EEPROM.write(addr, write_data);
   EEPROM.commit(); 
   return 0;

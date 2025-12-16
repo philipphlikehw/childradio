@@ -1,9 +1,10 @@
-#define URL_LENGTH  64
+#define URL_LENGTH  128
+#define HOSTNAME_LENGTH 32
 #define URL_COUNT   8     //Maximum count is 8. Do not increase!!!!
 #define URL_DEFAULT0  "http://stream.laut.fm/kinderlieder-123.m3u"
-#define URL_DEFAULT1  "http://stream.laut.fm/kinderradio.m3u"
+#define URL_DEFAULT1  "http://stream.laut.fm/radio-singmaeuse.m3u"
 #define URL_DEFAULT2  "https://liveradio.swr.de/sw282p3/swr1bw/"
-
+#define HOSTNAME_default  "Kinderradio"
 /*
  * Millisecond Timer, after a Vol-Change will be stored;
  */
@@ -11,7 +12,7 @@
 
 ////////////////////////////////////
 
-
+//#define IMAGECOVER
 
 /*
  * Define I2S connections
@@ -24,8 +25,10 @@
 #define MAX98357A_SD    32
 
 
-#define WEBRADIO_MAX_CONNECTION_RETRY 8
-#define WEBRADIO_MAX_CONNECTION_RETRY_REINIT_EEPROM 100
+#define WEBRADIO_MAX_CONNECTION_RETRY 8 //time
+#define WEBRADIO_MAX_CONNECTION_RETRY_REINIT_EEPROM WEBRADIO_MAX_CONNECTION_RETRY*10  //time
+#define WEBARDAIO_CONNECTION_TI  500  //ms
+#define TONE_DIMMING   100
 ////////////////////////////////////
 
 
@@ -59,10 +62,6 @@
 
 
 
- #define TONE_DIMMING   100
-
-
-
  /*
   * Battery managment
   */
@@ -72,7 +71,8 @@
   #define EN_PIN      23    //GPIO to activat the ADC
   #define BAT_ADC_REFRESH_INTERVAL  30*1000 //BAT: Check every 30sec
   #define BAT_ADC_DIV 2
-
+  #define BAT_min_Operation_level 5
+  
   #define minVoltage  3000
   #define maxVoltage  4200
 
@@ -105,3 +105,8 @@
   #define UPDATES_PER_SECOND 100
   #define BRIGHTNESS  64
   #define LED_TYPE    WS2811
+  #define MAX_POWER_MILLIAMPS 500
+
+
+// Funktion zur Überprüfung, ob ein String ein gültiger Hostname ist
+bool isValidHostname(const char* hostname);

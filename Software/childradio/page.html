@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<title>Kinderradio</title>
+		<style>
+			.fanrpmslider {
+				width: 30%;
+				height: 55px;
+				outline: none;
+			}
+			.bodytext {
+				font-family: "Verdana", "Arial", sans-serif;
+				font-size: 24px;
+				text-align: left;
+				font-weight: lighter;
+				border-radius: 5px;
+				display:inline;
+			}
+			.bodyhead {
+				font-family: "Verdana", "Arial", sans-serif;
+				font-size: 24px;
+				text-align: right;
+				font-weight: bolder;
+				border-radius: 5px;
+				display:inline;
+			}
+			.tableth {
+				font-family: "Verdana", "Arial", sans-serif;
+				font-size: 24px;
+				text-align: left;
+				font-weight: lighter;
+				border-radius: 5px;
+				display:inline;
+			}
+			.tabletd {
+				font-family: "Verdana", "Arial", sans-serif;
+				font-size: 24px;
+				text-align: left;
+				font-weight: lighter;
+				border-radius: 5px;
+				display:inline;
+			}
+		</style>
+		<script>
+		setInterval( function() { getData(); }, 2000 );
+		function getData() {
+			var xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4 && this.status == 200) {
+					document.getElementById("Station_Title").innerHTML = this.responseXML.getElementsByTagName('station_title')[0].childNodes[0].nodeValue;
+				}
+			};
+			xhttp.open("GET", "ajax_refresh", true);
+			xhttp.send();
+		}
+		</script>
+	</head>
+	<body>
+		<header>
+		</header>
+		<main>
+			<div class="bodyhead"> Kinderradio </div>
+			<br>
+				<table>
+					<tr>
+						<th class="tableth">Station</th>
+						<td class="tabletd"><p id="Station_Title">Not requested...</p></td>
+					</tr>
+				</table>
+			<br>
+				<h3>System Update</h3>
+					<form method='POST' action='/update' enctype='multipart/form-data'>
+						<input type='file' name='update'>
+						<input type='submit' value='Update'>
+					</form>
+		</main>
+		<footer>
+			
+		</footer>
+	</body>
+</html>

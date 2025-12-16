@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "AiEsp32RotaryEncoder.h"
 #include "my_common.h"
 

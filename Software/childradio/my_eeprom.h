@@ -1,6 +1,8 @@
 #include "my_common.h"
 #include <stdint.h>
 
+int write_hostname(char *destination);
+int read_hostname(char *destination);
 int write_url(uint16_t count, char *destination);
 int read_url(uint16_t count, char *destination);
 uint8_t read_station(bool increment=false);
@@ -26,8 +28,11 @@ int eeprom_read_array(uint16_t adr, char *file, uint8_t file_size);
 #define ALARM_STATUS_ADR    LAST_BAT_ADR+1
 #define ALARM_VOLUMEN_ADR   LAST_BAT_ADR+2
 #define HIGH_GAIN_ADR       LAST_BAT_ADR+3
-#define EEPROM_SIZE         LAST_BAT_ADR+4
-
+#define RGB_BRIGHTNESS_ADR  LAST_BAT_ADR+4
+#define RGB_TIME_ADR        LAST_BAT_ADR+5
+#define RGB_PALETTE_ADR     LAST_BAT_ADR+6
+#define HOSTNAME_ADR        RGB_PALETTE_ADR+1
+#define EEPROM_SIZE         HOSTNAME_ADR+HOSTNAME_LENGTH
 
 #define eeprom_read_station_counter()       eeprom_read_byte(   COUNTER_ADR,            "STATION COUNTER")
 #define eeprom_write_station_counter(val)   eeprom_write_byte(  COUNTER_ADR,  val,      "STATION COUNTER")
@@ -50,8 +55,14 @@ int eeprom_read_array(uint16_t adr, char *file, uint8_t file_size);
 #define eeprom_read_high_gain()             eeprom_read_byte(   HIGH_GAIN_ADR,          "ALARM VOLUMEN")    //Bit 0 is High gain
 #define eeprom_write_high_gain(val)         eeprom_write_byte(  HIGH_GAIN_ADR,val,      "ALARM VOLUMEN")    //Bit 0 is High gain
 
+#define eeprom_read_rgb_brightness()         eeprom_read_byte(   RGB_BRIGHTNESS_ADR,      "RGB BRIGHTNESS")
+#define eeprom_write_rgb_brightness(val)     eeprom_write_byte(  RGB_BRIGHTNESS_ADR,val,  "RGB BRIGHTNESS")
+#define eeprom_read_rgb_time()               eeprom_read_byte(   RGB_TIME_ADR,        "RGB TIME")
+#define eeprom_write_rgb_time(val)           eeprom_write_byte(  RGB_TIME_ADR,val,    "RGB TIME")
+#define eeprom_read_rgb_palette()            eeprom_read_byte(   RGB_PALETTE_ADR,      "RGB PALETTE")
+#define eeprom_write_rgb_palette(val)        eeprom_write_byte(  RGB_PALETTE_ADR,val, "RGB PALETTE")
 
-#define eeprom_write_bat(val)   eeprom_write_byte(   LAST_BAT_ADR,   val,  "BATTERY LEVEL")
-#define eeprom_read_bat()   eeprom_read_byte(   LAST_BAT_ADR,  "BATTERY LEVEL")
+#define eeprom_write_bat(val)                eeprom_write_byte(   LAST_BAT_ADR,   val,  "BATTERY LEVEL")
+#define eeprom_read_bat()                    eeprom_read_byte(   LAST_BAT_ADR,  "BATTERY LEVEL")
 unsigned long eeprom_read_time(void);
 void eeprom_write_time(unsigned long);

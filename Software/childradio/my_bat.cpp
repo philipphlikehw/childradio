@@ -1,11 +1,10 @@
+#include <Arduino.h>
 #include "my_common.h"
 #include "my_eeprom.h"
-#include <Arduino.h>
 
-uint16_t Battery_voltage;
+uint16_t Battery_voltage=4000;
 uint16_t battery_startup_level;
 uint16_t battery_last_operation;
-
 uint8_t BATTERY_get_level(uint16_t voltage) {
   if (voltage <= minVoltage) {
     return 0;
@@ -17,9 +16,13 @@ uint8_t BATTERY_get_level(uint16_t voltage) {
   }
 }
 
+static volatile  bool g_shutdownRequested = false;
+
+void BATTERY_shutdown(void){
+  g_shutdownRequested=true;
+}
 
 void BATTERY_handle(void *parameter){
-
     pinMode(BAT_ADC_PIN, INPUT);
     analogRead(BAT_ADC_PIN);
     Battery_voltage = (((analogRead(BAT_ADC_PIN)*102)/128)+ 137) * BAT_ADC_DIV;
@@ -30,6 +33,10 @@ void BATTERY_handle(void *parameter){
     analogRead(BAT_ADC_PIN);
     Battery_voltage = (((analogRead(BAT_ADC_PIN)*102)/128)+ 137) * BAT_ADC_DIV;
     vTaskDelay(BAT_ADC_REFRESH_INTERVAL);
+    if (g_shutdownRequested) {
+      printf("[TaskBattery] Shutdown requested, cleaning up...\n");
+      vTaskDelete(NULL);   // <--- Task beendet sich selbst
+    }
   }
 }
 

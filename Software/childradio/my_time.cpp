@@ -1,7 +1,19 @@
+#include <Arduino.h>
 #include <time.h>
 #include "my_time.h"
 #include "my_eeprom.h"
+#include "my_webradio2.h"
+#include "my_common.h"
 #include <MCP7940.h>
+#include <ESP32Ping.h>
+#include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint
+extern SpiffsFilePrint filePrint;
+//#define Serial filePrint
+//#include "I2CScanner.h"
+//I2CScanner scanner;
+
+#define SDA_PIN RTC_SDA	
+#define SCL_PIN RTC_SCL
 
 extern int DEBUG;
 
@@ -45,20 +57,23 @@ void printLocalTime(){
   if (DEBUG&32>0) Serial.println(&timeinfo, "Time: %A, %B %d %Y %H:%M:%S zone %Z %z ");
 }
 
-/*
- * SETUP
- */
+static volatile bool g_shutdownRequested = false;
 
-void setup_time(){  
+void TIME_shutdown(void){
+  g_shutdownRequested=true;
+}
+
+void time_handle(void *parameter){ 
 
   /*
    * Connect to NTP-Server and capture corrent time
    */
+  while(!Ping.ping("www.google.com", 3)){ vTaskDelay(500);}
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   if (DEBUG&32>0) Serial.print("Time: Waiting for NTP time sync: ");
   time_t now = time(nullptr);
   while (now < 8 * 3600 * 2) {
-    delay(100);
+    vTaskDelay(1000);
     if (DEBUG&32>0) Serial.print(".");
     now = time(nullptr);
   }
@@ -81,6 +96,7 @@ void setup_time(){
   if (DEBUG&32>0) Serial.print("Time: Read Time last Operation:  ");
   if (DEBUG&32>0) Serial.println(eeprom_read_time());
 
+  //scanner.Init();
 
 
 #define MCP7940_ENABLE
@@ -88,8 +104,12 @@ void setup_time(){
 
   while (!MCP7940.begin(RTC_SDA,RTC_SCL,RTC_I2C_SPEED))  // Loop until the RTC communications are established  19,23,100000
   {
-    if (DEBUG&32>0) Serial.println(F("Time: Unable to find MCP7940. Checking again ..."));
-    delay(100);
+    if (DEBUG&32>0) {
+      Serial.println(F("Time: Unable to find MCP7940. Checking again ..."));
+      //scanner.Scan();
+      vTaskDelay(10000);
+    }
+
   }  // of loop until device is located
   if (DEBUG&32>0) Serial.println(F("Time: MCP7940 initialized."));
   while (!MCP7940.deviceStatus())  // Turn oscillator on if necessary
@@ -99,7 +119,7 @@ void setup_time(){
     if (!deviceStatus)                          // If it didn't start
     {
       if (DEBUG&32>0) Serial.println(F("Time: Oscillator did not start, trying again."));
-      delay(1000);
+      vTaskDelay(1000);
     }  // of if-then oscillator didn't start
   }    // of while the oscillator is of
 
@@ -122,12 +142,17 @@ void setup_time(){
   snprintf(inputBuffer, 17, "%04d-%02d-%02d %02d:%02d", alarm_utc.year(), alarm_utc.month(), alarm_utc.day(),alarm_utc.hour(), alarm_utc.minute());
   if (DEBUG&32>0) Serial.print("Time: Read ALARM0 Value (UTC): ");
   if (DEBUG&32>0) Serial.println(inputBuffer);
-  
+  alarm_process();
 #endif
-}
-
-void loop_time() {
-  printLocalTime();
+  
+  while(1){
+    printLocalTime();
+    vTaskDelay(60*1000);
+    if (g_shutdownRequested) {
+      printf("[TaskTIME] Shutdown requested, cleaning up...\n");
+      vTaskDelete(NULL);   // <--- Task beendet sich selbst
+    }
+  }
 }
 
 unsigned long time_getEpochTime(){time_t now; time(&now);return now;}
@@ -141,31 +166,41 @@ unsigned long time_getlastsleepTime(){return time_lastsleepTime;}
  */
 void time_getlocal_htmlDateTime(char *buffer,uint8_t selection) 
 {
-  struct tm timeinfo;
-
-  if (selection==TIME_NOW){
-    if(!getLocalTime(&timeinfo)){
-      if (DEBUG&32>0) Serial.println("Time: Failed to obtain time 1");
-      if (DEBUG&32>0) sprintf(buffer, "2022-12-24T20:00M");
+  struct tm timeinfo;;
+  if(!getLocalTime(&timeinfo)){
+      //if (DEBUG&32>0) Serial.println("Time: Failed to obtain time 1");
+      //if (DEBUG&32>0) sprintf(buffer, "2022-12-24T20:00M");
       return;
-      }
-      Serial.print("Read RTC Value (UTC): ");
+  }
+      
+  if (selection==TIME_NOW){
+      //Serial.print("Read RTC Value (UTC): ");
       snprintf(buffer, 17, "%04d-%02d-%02dT%02d:%02d", timeinfo.tm_year+1900, timeinfo.tm_mon+1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min);
-      Serial.println(buffer);
+      //Serial.println(buffer);
       return;
   }else if (selection==TIME_ALARM0){
     uint8_t x;
-    DateTime alarm_utc = MCP7940.getAlarm(0, x); //This is utc time
-    snprintf(buffer, 17, "%04d-%02d-%02dT%02d:%02d", alarm_utc.year(), alarm_utc.month(), alarm_utc.day(),alarm_utc.hour(), alarm_utc.minute());
-    if (DEBUG&32>0) Serial.print("Time: Read ALARM0 Value (UTC): ");
-    if (DEBUG&32>0) Serial.println(buffer);
+    struct tm * alarminfo;
+    time_t     alarmtime;
+    DateTime alarm_utc_woy = MCP7940.getAlarm(0, x); //This is utc time
+    DateTime alarm_utc     = DateTime(timeinfo.tm_year+1900, alarm_utc_woy.month(), alarm_utc_woy.day(),alarm_utc_woy.hour(), alarm_utc_woy.minute(),0);
+    alarmtime=(time_t)alarm_utc.unixtime();
+    alarminfo=localtime(&alarmtime);
+
+    snprintf(buffer, 17, "%04d-%02d-%02dT%02d:%02d", alarminfo->tm_year+1900, alarminfo->tm_mon+1, alarminfo->tm_mday, alarminfo->tm_hour, alarminfo->tm_min);;
+    //if (DEBUG&32>0) Serial.print("Time: Read ALARM0 Value (UTC): ");
+    //if (DEBUG&32>0) Serial.println(buffer);
     return;
   }
   return;
 }
 
 void time_clearAlarm(void){
-  MCP7940.clearAlarm(0);
+    #ifdef MCP7940_ENABLE
+    uint8_t x;
+    DateTime alarm_utc = MCP7940.getAlarm(0, x); //This is utc time
+    MCP7940.setAlarm(0, matchAll,alarm_utc,false);
+  #endif
 }
 
 /*
@@ -244,6 +279,7 @@ void time_setAlarm(char *DateTimeChar)
       
       Serial.println("ALARM: Alarm0 is triggering");
       MCP7940.clearAlarm(0);
+      set_volumen(eeprom_read_alarm_volumen());
 
       if (alarmstatus>0){   //proceed only, if ALRAM is enabled
         if (weekday_nextAlarm==0){
